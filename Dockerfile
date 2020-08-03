@@ -19,5 +19,10 @@ RUN apt install -y libsm6 libxext6 libxrender1
 #RUN pip install pympler memory_profiler
 
 COPY . /home/kkheon
+
+# run make of vmaf
+WORKDIR /home/kkheon/QARC/vmaf
+RUN make
+
 WORKDIR /home/kkheon
 

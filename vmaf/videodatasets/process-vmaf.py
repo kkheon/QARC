@@ -7,8 +7,10 @@ import h5py
 # in 640x360
 # out vmaf future score
 # 5 + 4 + 3 + 2 + 1
-INPUT_W = 1280 // 8
-INPUT_H = 720 // 8
+#INPUT_W = 1280 // 8
+#INPUT_H = 720 // 8
+INPUT_W = 64
+INPUT_H = 36
 INPUT_D = 3
 INPUT_SEQ = 25
 import time
@@ -88,7 +90,8 @@ def event_loop():
 
 def main():
     x, y = event_loop()
-    saveh5f('train_hd.h5', x, y)
+    #saveh5f('train_hd.h5', x, y)
+    saveh5f('train_720p_vmaf.h5', x, y)
 
 
 if __name__ == '__main__':

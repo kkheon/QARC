@@ -1,6 +1,7 @@
 import os
 
-kernel_array = [8,16,32,128,256]
+#kernel_array = [8,16,32,128,256]
+kernel_array = [8, 16]
 lr_array = [1e-4]
 for k in kernel_array:
     #for d in dense_array:

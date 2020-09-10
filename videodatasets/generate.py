@@ -11,14 +11,16 @@ FPS = 25
 
 def eventloop(test_file):
     os.system('mkdir img')
-    #os.system('mkdir img/%s' % (test_file))
+    os.system('mkdir img/%s' % (test_file))
     os.system('mkdir tmp_%s' % (test_file))
     os.system('mkdir tmp2_%s' % (test_file))
     # ffmpeg -i mov/1.flv -vf fps=25 -s 1280x720 img/1.flv/%5d.png
     os.system('ffmpeg -y -i mov/%s -vf fps=%d -s 1280x720 tmp_%s/%%d.png' %
               (test_file, FPS, test_file))
-    os.system('ffmpeg -y -i tmp_%s/%%d.png -vf fps=5 -s 64x36 img/%s_%%d.png' %
-              (test_file, test_file))
+    #os.system('ffmpeg -y -i tmp_%s/%%d.png -vf fps=5 -s 64x36 img/%s_%%d.png' %
+    #          (test_file, test_file))
+    os.system('ffmpeg -y -i tmp_%s/%%d.png -vf fps=5 -s 64x36 img/%s/%s_%%d.png' %
+              (test_file, test_file, test_file))
     img_files = os.listdir('tmp_%s/' % test_file)
     img_files.sort()
     _count = len(img_files)

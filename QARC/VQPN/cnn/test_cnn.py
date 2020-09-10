@@ -27,10 +27,7 @@ OUTPUT_DIM = 5
 KERNEL = int(sys.argv[1])
 DENSE_SIZE = int(sys.argv[2])
 
-EPOCH = 1500
-BATCH_SIZE = 50
 LR_RATE = float(sys.argv[3])
-EARLYSTOP = 30
 #
 # long term 1,5,10
 #
@@ -159,7 +156,7 @@ def load_image(filename):
 
 
 def event_loop():
-    X, Y = load_h5('../train_720p_vmaf.h5')
+    #X, Y = load_h5('../train_720p_vmaf.h5')
     testX, testY = load_h5('../test_720p_vmaf.h5')
     gpu_options = tf.GPUOptions(allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -182,68 +179,55 @@ def event_loop():
 #tf.reduce_mean(tf.abs(core_net - y_) / (tf.abs(core_net) + tf.abs(y_) / 2))
         core_net_mape = tf.subtract(1.0, tf.reduce_mean(
             tf.abs(core_net - y_) / tf.abs(y_)))
-        train_len = X.shape[0]
+
+        #core_net_diff = tf.abs(core_net - y_)
+        core_net_diff = core_net - y_
+
+        #train_len = X.shape[0]
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         best_saver = tf.train.Saver()
-        _writer = open('log/' + str(KERNEL) + '_' +
+
+        # load model
+        model_path = 'best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt'
+        print model_path
+        saver.restore(sess, model_path)
+
+        _writer = open('log_test/' + str(KERNEL) + '_' +
                        str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
         _min_mape, _min_step = 10.0, 0
-        for j in range(1, EPOCH + 1):
-            i = 0
-            while i < train_len - BATCH_SIZE:
-                batch_xs, batch_ys = X[i:i+BATCH_SIZE], Y[i:i+BATCH_SIZE]
-                sess.run(core_train_op, feed_dict={
-                    x: batch_xs, y_: batch_ys})
-                i += BATCH_SIZE
+        #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
+        _test_diff = sess.run(core_net_diff, feed_dict={x: testX, y_: testY})
+        print 'rmse', _test_diff
 
-            #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
-            _test_mape = sess.run(core_net_acc, feed_dict={
-                                  x: testX, y_: testY})
-            print 'epoch', j, 'rmse', _test_mape
+        _writer.write('Y : ')
+        _writer.write('\n')
+        for eachSet in testY:
+            for eachY in eachSet:
+                _writer.write(str(eachY) + ', ' )
+            _writer.write('\n')
+        _writer.write('\n')
 
-            if _min_mape > _test_mape:
-                _min_mape = _test_mape
-                _min_step = j
-                best_saver.save(sess, 'best/' + str(KERNEL) + '_' +
-                                str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt')
-                _test_y = sess.run(core_net, feed_dict={x: testX})
-                save_plot(_test_y, testY, j)
-                _best = open('best/' + str(KERNEL) + '_' +
-                             str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt', 'w')
-                _best.write(str(_test_mape))
-                _best.close()
-                print 'new record'
-            else:
-                if j - _min_step > EARLYSTOP:
-                    print 'early stop'
-                    return
+        _writer.write('diff : ')
+        for each_diff_set in _test_diff:
+            for each_diff in each_diff_set:
+                _writer.write(str(each_diff) + ', ')
+            _writer.write('\n')
+        _writer.write('\n')
+        _writer.close()
 
-            _writer.write(str(j) + ',' + str(_test_mape) + '\n')
-            # if j % 10 == 0:
-            #    _test_y = sess.run(core_net, feed_dict={x: testX})
-            #    saver.save(sess, 'model/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_' + str(j) + '.ckpt')
-            #    save_plot(_test_y,testY,j)
+
+
 
 
 def main():
-    if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
-        print 'this params has been previously operated.'
-        return
+    #if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
+    #    print 'this params has been previously operated.'
+    #    return
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
-    os.system('mkdir save')
-    os.system('mkdir model')
-    os.system('mkdir best')
-    os.system('mkdir log')
 
-    os.system('mkdir save/' + str(KERNEL) + '_' +
-              str(DENSE_SIZE) + '_' + str(LR_RATE))
-    os.system('mkdir model/' + str(KERNEL) + '_' +
-              str(DENSE_SIZE) + '_' + str(LR_RATE))
-    os.system('mkdir best/' + str(KERNEL) + '_' +
-              str(DENSE_SIZE) + '_' + str(LR_RATE))
     #os.system('mkdir best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE))
-    #os.system('mkdir log')
+    os.system('mkdir log_test')
     event_loop()
 
 

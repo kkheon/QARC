@@ -17,9 +17,6 @@ INPUT_D = 3
 #INPUT_SEQ = 25
 INPUT_SEQ = 1
 
-#MODE = 'train'
-MODE = 'test'
-
 import time
 
 # 300,45.6419748364
@@ -60,7 +57,7 @@ def load_image(filename):
 
 
 def saveh5f(filename, x, y):
-    print y
+    #print y
     h5f = h5py.File(filename, 'w')
     h5f.create_dataset('X', data=x)
     h5f.create_dataset('Y', data=y)
@@ -68,11 +65,15 @@ def saveh5f(filename, x, y):
     print 'save done'
 
 
-def event_loop():
+def event_loop(MODE, N_SUBSET):
     IMG_PATH = 'img_' + MODE + '/'
     _dirs = os.listdir(IMG_PATH)
     _x_array, _y_array = [], []
-    for _dir in _dirs:
+    length_dir = len(_dirs)
+    length_dir_subset = int(length_dir / N_SUBSET)
+
+    #for _dir in _dirs:
+    for idx, _dir in enumerate(_dirs):
         print _dir
         _files = os.listdir(IMG_PATH + _dir + '/')
         y = load_y(_dir)
@@ -104,16 +105,42 @@ def event_loop():
             if len(y) > _index:
                 _x_array.append(x)            # 25 frame of video
                 _y_array.append(y[_index])    # 5 bitrate's vmaf
+
+        # save partial 
+        if N_SUBSET > 1:
+            sub_idx = idx // length_dir_subset
+            if (idx % length_dir_subset) == (length_dir_subset -1):
+                print 'idx : %d, idx_subset : %d, length_subset : %d' % (idx, idx % length_dir_subset, length_dir_subset)
+                saveh5f(MODE + '_720p_vmaf_' + str(sub_idx) + '.h5', _x_array, _y_array)
+                _x_array, _y_array = [], []
+                print len(_x_array)
+                print len(_y_array)
+
+    # save h5
+    if N_SUBSET > 1:
+        # save leftover
+        sub_idx = idx // length_dir_subset
+        saveh5f(MODE + '_720p_vmaf_' + str(sub_idx) + '.h5', _x_array, _y_array)
+    else:
+        saveh5f(MODE + '_720p_vmaf.h5', _x_array, _y_array)
+
     return np.array(_x_array), np.array(_y_array)
     #y_ = np.array([OUTPUT_DIM])
 
 
 def main():
-    x, y = event_loop()
+    MODE = 'train'
+    N_SUBSET = 40
+    x, y = event_loop(MODE, N_SUBSET)
+
+    MODE = 'test'
+    N_SUBSET = 10
+    x, y = event_loop(MODE, N_SUBSET)
+
     #saveh5f('train_hd.h5', x, y)
     #saveh5f('train_720p_vmaf.h5', x, y)
     
-    saveh5f(MODE + '_720p_vmaf.h5', x, y)
+    #saveh5f(MODE + '_720p_vmaf.h5', x, y)
 
 
 if __name__ == '__main__':

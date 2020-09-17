@@ -21,7 +21,7 @@ RUN apt install -y libsm6 libxext6 libxrender1
 COPY . /home/kkheon
 
 # run make of vmaf
-WORKDIR /home/kkheon/QARC/vmaf
+WORKDIR /home/kkheon/vmaf
 RUN make
 
 WORKDIR /home/kkheon

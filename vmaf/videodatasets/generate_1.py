@@ -32,6 +32,10 @@ def eventloop(mode, test_file):
     os.system('mkdir %s' % (TMP_PATH))
     os.system('mkdir %s' % (TMP2_PATH))
 
+    # test
+    # ffmpeg -loop 1 -i mov/videoSRC001_1280x720_30_qp_00.264 -vf "crop=iw/3:ih/4:mod(n,3)*iw/3:trunc(n/3)*ih/4" -vframes 5 out_%d.png
+    #ffmpeg -i mov/videoSRC001_1280x720_30_qp_00.264 -vf "crop=w=256:h=144:x=0:y=0" -vframes 5 out_%d.png
+
     ## ffmpeg -i mov/1.flv -vf fps=25 -s 1280x720 img/1.flv/%5d.png
     #os.system('ffmpeg -threads 4 -y -i %s/%s -vf fps=%d -s 1280x720 %s/%%d.png' %
     #          (INPUT_PATH, test_file, FPS, TMP_PATH))

@@ -9,6 +9,7 @@ from tflearn.layers.conv import max_pool_2d
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot, savefig
 import sys
+import glob
 # implmenation of vmaf neural network
 # in 640x360
 # out vmaf future score
@@ -28,7 +29,9 @@ KERNEL = int(sys.argv[1])
 DENSE_SIZE = int(sys.argv[2])
 
 EPOCH = 1500
-BATCH_SIZE = 50
+BATCH_SIZE = 100
+#BATCH_SIZE = 50 # ORG
+#BATCH_SIZE = 20
 LR_RATE = float(sys.argv[3])
 EARLYSTOP = 30
 #
@@ -159,8 +162,16 @@ def load_image(filename):
 
 
 def event_loop():
-    X, Y = load_h5('../train_720p_vmaf.h5')
-    testX, testY = load_h5('../test_720p_vmaf.h5')
+    #X, Y = load_h5('../train_720p_vmaf.h5')
+    #path = "../"
+    #file_list = os.listdir(path)
+    #file_list_h5 = [file for file in file_list if file.endswith(".h5")]
+    file_list_train_h5  = glob.glob("../train_*.h5")
+
+    #testX, testY = load_h5('../test_720p_vmaf.h5')
+    #testX, testY = load_h5('../test_720p_vmaf_0.h5')
+    file_list_test_h5  = glob.glob("../test_*.h5")
+
     gpu_options = tf.GPUOptions(allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
         x = tf.placeholder(
@@ -179,27 +190,40 @@ def event_loop():
             learning_rate=LR_RATE).minimize(core_net_loss)
         core_net_acc = tf.sqrt(tf.reduce_mean(
             tf.square(tf.subtract(core_net, y_))))
+        core_net_sse = tf.reduce_mean( tf.square(tf.subtract(core_net, y_))))
 #tf.reduce_mean(tf.abs(core_net - y_) / (tf.abs(core_net) + tf.abs(y_) / 2))
         core_net_mape = tf.subtract(1.0, tf.reduce_mean(
             tf.abs(core_net - y_) / tf.abs(y_)))
-        train_len = X.shape[0]
+        #train_len = X.shape[0]
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         best_saver = tf.train.Saver()
-        _writer = open('log/' + str(KERNEL) + '_' +
-                       str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
+        _writer = open('log/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
         _min_mape, _min_step = 10.0, 0
         for j in range(1, EPOCH + 1):
-            i = 0
-            while i < train_len - BATCH_SIZE:
-                batch_xs, batch_ys = X[i:i+BATCH_SIZE], Y[i:i+BATCH_SIZE]
-                sess.run(core_train_op, feed_dict={
-                    x: batch_xs, y_: batch_ys})
-                i += BATCH_SIZE
+            for each_h5 in file_list_train_h5:
+                X, Y = load_h5(each_h5)
 
-            #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
-            _test_mape = sess.run(core_net_acc, feed_dict={
-                                  x: testX, y_: testY})
+                train_len = X.shape[0]
+                i = 0
+                while i < train_len - BATCH_SIZE:
+                    batch_xs, batch_ys = X[i:i+BATCH_SIZE], Y[i:i+BATCH_SIZE]
+                    sess.run(core_train_op, feed_dict={x: batch_xs, y_: batch_ys})
+                    i += BATCH_SIZE
+
+            _test_mape = 0
+            list_test_mape = []
+            for each_h5 in file_list_test_h5:
+                testX, testY = load_h5(each_h5)
+                test_len = testX.shape[0]
+                k = 0
+                while k < test_len - BATCH_SIZE:
+                    #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
+                    each_test_mape = sess.run(core_net_sse, feed_dict={x: testX[k:k+BATCH_SIZE], y_: testY[k:k+BATCH_SIZE]})
+                    #_test_mape += each_test_mape 
+                    list_test_mape.append(each_test_mape)
+                    k += BATCH_SIZE
+            _test_mape = np.sqrt(np.mean(list_test_mape))
             print 'epoch', j, 'rmse', _test_mape
 
             if _min_mape > _test_mape:

@@ -9,13 +9,13 @@ import h5py
 # 5 + 4 + 3 + 2 + 1
 #INPUT_W = 1280 // 8
 #INPUT_H = 720 // 8
-#INPUT_W = 64
-#INPUT_H = 36
-INPUT_W = 256
-INPUT_H = 144
+INPUT_W = 64
+INPUT_H = 36
+#INPUT_W = 256
+#INPUT_H = 144
 INPUT_D = 3
-#INPUT_SEQ = 25
-INPUT_SEQ = 1
+INPUT_SEQ = 25
+#INPUT_SEQ = 1
 
 import time
 

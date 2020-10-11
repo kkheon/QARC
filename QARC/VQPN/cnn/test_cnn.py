@@ -13,17 +13,21 @@ import glob
 # implmenation of vmaf neural network
 # in 640x360
 # out vmaf future score
-#INPUT_W = 64
-#INPUT_H = 36
+INPUT_W = 64
+INPUT_H = 36
 #INPUT_W = 64*4
 #INPUT_H = 36*4
-INPUT_W = 256
-INPUT_H = 144
+#INPUT_W = 256
+#INPUT_H = 144
 INPUT_D = 3
 # long seq
-#INPUT_SEQ = 25
-INPUT_SEQ = 1
-OUTPUT_DIM = 5
+INPUT_SEQ = 25
+#INPUT_SEQ = 1
+#OUTPUT_DIM = 5
+OUTPUT_DIM = 1
+
+#BATCH_SIZE = 100
+BATCH_SIZE = 1
 
 KERNEL = int(sys.argv[1])
 DENSE_SIZE = int(sys.argv[2])
@@ -156,10 +160,11 @@ def load_image(filename):
     return img
 
 
-def event_loop():
+def event_loop(target):
     #X, Y = load_h5('../train_720p_vmaf.h5')
     #testX, testY = load_h5('../test_720p_vmaf.h5')
-    file_list_test_h5  = glob.glob("../test_*.h5")
+    #file_list_test_h5  = glob.glob("../test_*.h5")
+    file_list_test_h5  = glob.glob("../eval_*.h5")
 
     gpu_options = tf.GPUOptions(allow_growth=True)
     with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
@@ -192,50 +197,67 @@ def event_loop():
         best_saver = tf.train.Saver()
 
         # load model
-        model_path = 'best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt'
+        model_path = target + '/best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt'
         print model_path
         saver.restore(sess, model_path)
 
-        _writer = open('log_test/' + str(KERNEL) + '_' +
-                       str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
+        _writer = open('log_test_' + target + '/y_' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
+        _writer_diff = open('log_test_' + target + '/diff_' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
         _min_mape, _min_step = 10.0, 0
         #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
         for each_h5 in file_list_test_h5:
             testX, testY = load_h5(each_h5)
-            _test_diff = sess.run(core_net_diff, feed_dict={x: testX, y_: testY})
-            print 'rmse', _test_diff
+            #_test_diff = sess.run(core_net_diff, feed_dict={x: testX, y_: testY})
+            test_len = testX.shape[0]
 
-            _writer.write('Y : ')
-            _writer.write('\n')
-            for eachSet in testY:
-                for eachY in eachSet:
-                    _writer.write(str(eachY) + ', ' )
-                _writer.write('\n')
-            _writer.write('\n')
+            if OUTPUT_DIM == 1:
+                testY = np.expand_dims(testY, -1)
 
-            _writer.write('diff : ')
-            for each_diff_set in _test_diff:
-                for each_diff in each_diff_set:
-                    _writer.write(str(each_diff) + ', ')
-                _writer.write('\n')
-            _writer.write('\n')
+            k = 0
+            while k < test_len - BATCH_SIZE:
+                #print testX[k]
+                #print testY[k]
+                _test_diff = sess.run(core_net_diff, feed_dict={x: testX[k:k+BATCH_SIZE], y_: testY[k:k+BATCH_SIZE]})
+                print 'rmse', _test_diff
+
+                #_writer.write('Y : ')
+                #_writer.write('\n')
+                for eachSet in testY[k:k+BATCH_SIZE]:
+                    for eachY in eachSet:
+                        _writer.write(str(eachY) + ', ' )
+                    _writer.write('\n')
+                #_writer.write('\n')
+
+                #_writer.write('diff : ')
+                #_writer.write('\n')
+                for each_diff_set in _test_diff:
+                    for each_diff in each_diff_set:
+                        _writer_diff.write(str(each_diff) + ', ')
+                    _writer_diff.write('\n')
+                #_writer_diff.write('\n')
+
+                k += BATCH_SIZE
+        # close
         _writer.close()
+        _writer_diff.close()
 
 
 
 
 
-def main():
+def main(target):
     #if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
     #    print 'this params has been previously operated.'
     #    return
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
     #os.system('mkdir best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE))
-    os.system('mkdir log_test')
-    event_loop()
+    os.system('mkdir log_test_' + target)
+    event_loop(target)
 
 
 if __name__ == '__main__':
-    main()
+    #main('bak_org_qp')
+    #main('bak_crop_qp')
+    main('bak_crop_qp_pred')
 

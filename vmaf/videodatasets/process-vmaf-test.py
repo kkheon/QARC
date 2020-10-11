@@ -9,10 +9,10 @@ import h5py
 # 5 + 4 + 3 + 2 + 1
 #INPUT_W = 1280 // 8
 #INPUT_H = 720 // 8
-#INPUT_W = 64
-#INPUT_H = 36
-INPUT_W = 1280
-INPUT_H = 720
+INPUT_W = 64
+INPUT_H = 36
+#INPUT_W = 1280
+#INPUT_H = 720
 INPUT_D = 3
 INPUT_SEQ = 25
 import time
@@ -63,7 +63,8 @@ def saveh5f(filename, x, y):
     print 'save done'
 
 import sys
-DIR = sys.argv[1]
+#DIR = sys.argv[1]
+DIR = 'img_test'
 def event_loop():
     _dirs = os.listdir(DIR + '/')
     _x_array, _y_array = [], []
@@ -93,7 +94,8 @@ def event_loop():
 
 def main():
     x, y = event_loop()
-    saveh5f(DIR + '.h5', x, y)
+    #saveh5f(DIR + '.h5', x, y)
+    saveh5f('test_720p_vmaf.h5', x, y)
 
 
 if __name__ == '__main__':

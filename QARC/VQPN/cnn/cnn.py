@@ -13,25 +13,31 @@ import glob
 # implmenation of vmaf neural network
 # in 640x360
 # out vmaf future score
-#INPUT_W = 64
-#INPUT_H = 36
+INPUT_W = 64
+INPUT_H = 36
 #INPUT_W = 64*4
 #INPUT_H = 36*4
-INPUT_W = 256
-INPUT_H = 144
+#INPUT_W = 256
+#INPUT_H = 144
 INPUT_D = 3
 # long seq
-#INPUT_SEQ = 25
-INPUT_SEQ = 1
-OUTPUT_DIM = 5
+INPUT_SEQ = 25
+#INPUT_SEQ = 1
+
+#OUTPUT_DIM = 5
+OUTPUT_DIM = 1
 
 KERNEL = int(sys.argv[1])
 DENSE_SIZE = int(sys.argv[2])
 
-EPOCH = 1500
-BATCH_SIZE = 100
-#BATCH_SIZE = 50 # ORG
+#EPOCH = 1500
+EPOCH = 15000
+#BATCH_SIZE = 100
+BATCH_SIZE = 50 # ORG
+#BATCH_SIZE = 30
 #BATCH_SIZE = 20
+#TEST_BATCH_SIZE = 100
+TEST_BATCH_SIZE = 0 # OFF
 LR_RATE = float(sys.argv[3])
 EARLYSTOP = 30
 #
@@ -190,7 +196,7 @@ def event_loop():
             learning_rate=LR_RATE).minimize(core_net_loss)
         core_net_acc = tf.sqrt(tf.reduce_mean(
             tf.square(tf.subtract(core_net, y_))))
-        core_net_sse = tf.reduce_mean( tf.square(tf.subtract(core_net, y_))))
+        core_net_sse = tf.reduce_mean( tf.square(tf.subtract(core_net, y_)))
 #tf.reduce_mean(tf.abs(core_net - y_) / (tf.abs(core_net) + tf.abs(y_) / 2))
         core_net_mape = tf.subtract(1.0, tf.reduce_mean(
             tf.abs(core_net - y_) / tf.abs(y_)))
@@ -198,6 +204,15 @@ def event_loop():
         sess.run(tf.global_variables_initializer())
         saver = tf.train.Saver()
         best_saver = tf.train.Saver()
+
+
+        # load model
+        if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
+            model_path = 'best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt'
+            print 'load best_model : ' + model_path
+            saver.restore(sess, model_path)
+
+
         _writer = open('log/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.csv', 'w')
         _min_mape, _min_step = 10.0, 0
         for j in range(1, EPOCH + 1):
@@ -208,6 +223,11 @@ def event_loop():
                 i = 0
                 while i < train_len - BATCH_SIZE:
                     batch_xs, batch_ys = X[i:i+BATCH_SIZE], Y[i:i+BATCH_SIZE]
+
+                    # temp 
+                    if OUTPUT_DIM == 1:
+                        batch_ys = np.expand_dims(batch_ys, -1)
+
                     sess.run(core_train_op, feed_dict={x: batch_xs, y_: batch_ys})
                     i += BATCH_SIZE
 
@@ -215,15 +235,23 @@ def event_loop():
             list_test_mape = []
             for each_h5 in file_list_test_h5:
                 testX, testY = load_h5(each_h5)
-                test_len = testX.shape[0]
-                k = 0
-                while k < test_len - BATCH_SIZE:
-                    #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
-                    each_test_mape = sess.run(core_net_sse, feed_dict={x: testX[k:k+BATCH_SIZE], y_: testY[k:k+BATCH_SIZE]})
-                    #_test_mape += each_test_mape 
-                    list_test_mape.append(each_test_mape)
-                    k += BATCH_SIZE
-            _test_mape = np.sqrt(np.mean(list_test_mape))
+                if TEST_BATCH_SIZE == 0:
+                    # temp 
+                    if OUTPUT_DIM == 1:
+                        testY = np.expand_dims(testY, -1)
+
+                    _test_mape = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
+                else:
+                    test_len = testX.shape[0]
+                    k = 0
+                    while k < test_len - TEST_BATCH_SIZE:
+                        #_test_acc = sess.run(core_net_acc, feed_dict={x: testX,y_:testY})
+                        each_test_mape = sess.run(core_net_sse, feed_dict={x: testX[k:k+TEST_BATCH_SIZE], y_: testY[k:k+TEST_BATCH_SIZE]})
+                        #_test_mape += each_test_mape 
+                        list_test_mape.append(each_test_mape)
+                        k += TEST_BATCH_SIZE
+            if TEST_BATCH_SIZE != 0:
+                _test_mape = np.sqrt(np.mean(list_test_mape))
             print 'epoch', j, 'rmse', _test_mape
 
             if _min_mape > _test_mape:
@@ -231,8 +259,9 @@ def event_loop():
                 _min_step = j
                 best_saver.save(sess, 'best/' + str(KERNEL) + '_' +
                                 str(DENSE_SIZE) + '_' + str(LR_RATE) + '/nn_model_ep_best.ckpt')
-                _test_y = sess.run(core_net, feed_dict={x: testX})
-                save_plot(_test_y, testY, j)
+                if TEST_BATCH_SIZE != 0:
+                    _test_y = sess.run(core_net, feed_dict={x: testX})
+                    save_plot(_test_y, testY, j)
                 _best = open('best/' + str(KERNEL) + '_' +
                              str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt', 'w')
                 _best.write(str(_test_mape))
@@ -251,9 +280,10 @@ def event_loop():
 
 
 def main():
-    if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
-        print 'this params has been previously operated.'
-        return
+    #if os.path.exists('best/' + str(KERNEL) + '_' + str(DENSE_SIZE) + '_' + str(LR_RATE) + '.txt'):
+    #    print 'this params has been previously operated.'
+    #    return
+
     os.environ['CUDA_VISIBLE_DEVICES'] = '1'
     os.system('mkdir save')
     os.system('mkdir model')

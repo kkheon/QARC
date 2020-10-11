@@ -1,6 +1,8 @@
 import os
-MODE = 'train'
-TEST_FOLDER = './mov_train'
+#MODE = 'train'
+#MODE = 'test'  # validation
+MODE = 'eval'
+TEST_FOLDER = './mov_' + MODE
 
 def main():
     test_files = os.listdir(TEST_FOLDER)

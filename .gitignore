@@ -1,2 +1,14 @@
 *.pyc
 .vscode/
+*.h5
+*.png
+*.flv
+*.264
+./vmaf/videodatasets/img*
+./vmaf/videodatasets/tmp_*
+./vmaf/videodatasets/tmp2_*
+./vmaf/videodatasets/mov_*
+./vmaf/videodatasets/*.log
+./vmaf/videodatasets/*.json
+./QARC/VQPN/*.h5
+*.yuv

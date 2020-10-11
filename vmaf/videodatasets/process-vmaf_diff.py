@@ -21,6 +21,8 @@ import time
 # 1100,81.1788565049
 # 1400,86.2749310139
 
+#testrange = [22, 27, 32, 37, 42]
+testrange = [22]
 
 def load_y(filename):
     #_index = index + 1
@@ -62,36 +64,76 @@ def saveh5f(filename, x, y):
 
 
 def event_loop(MODE, N_SUBSET):
-    #_dirs = os.listdir('img_train/')
     IMG_PATH = 'img_' + MODE + '/'
     _dirs = os.listdir(IMG_PATH)
+
+    ## for the test. 
+    #_dirs = [_dirs[0]]
+
     _x_array, _y_array = [], []
     length_dir = len(_dirs)
     length_dir_subset = int(length_dir / N_SUBSET)
 
-    #for _dir in _dirs:
     for idx, _dir in enumerate(_dirs):
         print _dir
-        #_files = os.listdir('img_train/' + _dir + '/')
         _files = os.listdir(IMG_PATH + _dir + '/')
         y = load_y(_dir)
         #_files.sort()
         _p = [int(l.split('_')[-1].split('.')[0]) for l in _files]
 	_p.sort()
-	x = np.zeros([INPUT_SEQ, INPUT_H, INPUT_W, INPUT_D])
-        _index = 0
-        for _file in _p:
-            x = np.roll(x, -1, axis=0)
-            #_img = load_image('img_train/' + _dir + '/' + str(_file) + '.png')
-            _img = load_image(IMG_PATH + _dir + '/' + str(_file) + '.png')
-            x[-1] = _img
-            _index += 1
-            if _index % (INPUT_SEQ / 5) == 0:
-                _y_index = _index / (INPUT_SEQ / 5)
-                #print _y_index
-                if len(y) > _y_index:
-                    _x_array.append(x)
-                    _y_array.append(y[_y_index])
+
+        for range_idx, each_range in enumerate(testrange):
+	    x = np.zeros([INPUT_SEQ, INPUT_H, INPUT_W, INPUT_D])
+            _index = 0
+
+            for _file in _p:
+                #print _file
+                x = np.roll(x, -1, axis=0)
+                #_img = load_image('img_train/' + _dir + '/' + str(_file) + '.png')
+                _img_filename = IMG_PATH + _dir + '/' + _dir + '_' + str(_file) + '.png'
+                #print 'img : ' + _img_filename
+                _img = load_image(_img_filename)
+                _img = _img.astype('float32') 
+                _img = _img / 255
+                #print _img.shape
+                #print _img[:, :, 0]
+
+                # filename parsing
+                #_filename, _ = _file.rsplit('.', 1)
+                #_, curr_frm = _filename.rsplit('_', 1)
+                curr_frm = _file
+                # curr_frm : 1~30 or 1~24 it depends on video's fps. 
+
+                target_frm = (curr_frm - 1) * 5 + 3        # 1=>1+2, 2=>6+2, 3=>11+2 
+                target_frm_period = (target_frm / 25) * 25 + 1  # 3=>1, 8=>1, 13=>1, 
+                target_file = target_frm % 25
+
+                # load encoded image 
+                # tmp2_videoSRC003_1280x720_30_qp_00.264_320_540_qp27_frm_126
+                encoded_filename = 'tmp2_' + _dir + '_qp' + str(each_range) + '_frm_' + str(target_frm_period) + '/' + str(target_file) + '.png'
+                #print 'encoded : ' +  encoded_filename
+                _img_encoded = load_image(encoded_filename)
+                _img_encoded  = _img_encoded.astype('float32')
+                _img_encoded  = _img_encoded / 255
+                #print _img_encoded.shape
+                #print _img_encoded [:, :, 0]
+
+
+                # diff image    # CHECKME : what if the diff goes under 0?
+                _img_diff = _img_encoded - _img
+                #print 'diff : \n'
+                #print _img_diff[:, :, 0]
+
+
+                x[-1] = _img_diff
+                _index += 1
+                if _index % (INPUT_SEQ / 5) == 0:
+                    _y_index = _index / (INPUT_SEQ / 5)
+                    #print _y_index
+                    if len(y) > _y_index:
+                        _x_array.append(x)
+                        _y_array.append(y[_y_index][range_idx])
+
 
         # save partial 
         if N_SUBSET > 1:
@@ -121,13 +163,13 @@ def main():
     ##saveh5f('train_hd.h5', x, y)
     #saveh5f('train_720p_vmaf.h5', x, y)
 
-    #MODE = 'train'
-    #N_SUBSET = 10
-    #x, y = event_loop(MODE, N_SUBSET)
+    MODE = 'train'
+    N_SUBSET = 5
+    x, y = event_loop(MODE, N_SUBSET)
 
-    #MODE = 'test'
-    #N_SUBSET = 1
-    #x, y = event_loop(MODE, N_SUBSET)
+    MODE = 'test'
+    N_SUBSET = 1
+    x, y = event_loop(MODE, N_SUBSET)
 
     MODE = 'eval'
     N_SUBSET = 1

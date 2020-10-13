@@ -83,20 +83,30 @@ def load_h5(filename):
 
 def CNN_Core(x, reuse=False):
     with tf.variable_scope('cnn_core', reuse=reuse):
+        print('CNN_Core')
+        print(x.get_shape())
         network = tflearn.conv_2d(
             x, KERNEL, 5, activation='relu', regularizer="L2", weight_decay=0.0001)
+        print(network.get_shape())
         network = tflearn.max_pool_2d(network, 2)
+        print(network.get_shape())
         network = tflearn.conv_2d(
             network, KERNEL, 3, activation='relu', regularizer="L2", weight_decay=0.0001)
+        print(network.get_shape())
         network = tflearn.max_pool_2d(network, 2)
+        print(network.get_shape())
         network = tflearn.conv_2d(
             network, KERNEL, 3, activation='relu', regularizer="L2", weight_decay=0.0001)
+        print(network.get_shape())
         network = tflearn.max_pool_2d(network, 2)
+        print(network.get_shape())
         network = tflearn.conv_2d(
             network, KERNEL // 2, 3, activation='relu', regularizer="L2", weight_decay=0.0001)
+        print(network.get_shape())
         # network = tflearn.fully_connected(
         #   network, DENSE_SIZE, activation='relu')
         split_flat = tflearn.flatten(network)
+        print(split_flat.get_shape())
         return split_flat
 
 
